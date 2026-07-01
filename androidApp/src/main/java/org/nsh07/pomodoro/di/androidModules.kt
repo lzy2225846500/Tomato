@@ -46,6 +46,7 @@ import org.nsh07.pomodoro.data.TaskRepository
 import org.nsh07.pomodoro.service.AppServiceHelper
 import org.nsh07.pomodoro.service.ServiceHelper
 import org.nsh07.pomodoro.service.addTimerActions
+import org.nsh07.pomodoro.widget.WidgetUpdatingTaskRepository
 
 val servicesModule = module {
     single<CoroutineDispatcher> { Dispatchers.IO }
@@ -53,7 +54,8 @@ val servicesModule = module {
     single<AppInfo> { create(::createAppInfo) }
     single<AppStatRepository>() bind StatRepository::class
     single<AppPreferenceRepository>() bind PreferenceRepository::class
-    single<AppTaskRepository>() bind TaskRepository::class
+    single<AppTaskRepository>()
+    single<TaskRepository> { WidgetUpdatingTaskRepository(get<AppTaskRepository>(), get()) }
     single<AppFocusSessionRepository>() bind FocusSessionRepository::class
     single<StateRepository>()
     single<AppServiceHelper>() bind ServiceHelper::class
