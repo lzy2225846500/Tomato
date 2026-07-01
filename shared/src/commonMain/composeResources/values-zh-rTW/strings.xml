@@ -92,6 +92,8 @@
     <string name="hours_format">%1$d小時</string>
     <string name="minutes_format">%1$d分鐘</string>
     <string name="about">關於</string>
+    <string name="add_task">新增任務</string>
+    <string name="completed_tasks">已完成任務</string>
     <string name="help_with_translation_desc">將 Tomato 翻譯成你的語言</string>
     <string name="rate_on_google_play_desc">喜歡這個 App 嗎？寫個評論吧！</string>
     <string name="bmc_desc">以小額捐款支持我</string>
@@ -104,6 +106,13 @@
     <string name="undo">復原</string>
     <string name="reset_data">重置統計資料</string>
     <string name="reset_data_dialog_text">所有已儲存的統計資料都將被永久刪除，且無法復原。</string>
+    <string name="later">稍後</string>
+    <string name="move_to_later">移到稍後</string>
+    <string name="move_to_today">移到今天</string>
+    <string name="no_tasks_today">今天還沒有任務。</string>
+    <string name="pomodoros">番茄鐘</string>
+    <string name="task_title">任務標題</string>
+    <string name="task_focus">任務專注</string>
     <string name="auto_start_next_timer_desc">停止鬧鐘後自動開始下一個計時</string>
     <string name="auto_start_next_timer">自動開始下一個計時</string>
     <string name="secure_aod">螢幕長亮模式安全鎖定</string>
@@ -123,6 +132,7 @@
     <string name="back">返回</string>
     <string name="reset_data_dialog_title">要重設所有統計資料嗎？</string>
     <string name="today_widget_desc">今日專注統計</string>
+    <string name="unassigned">未關聯任務</string>
     <string name="history_widget_desc">查看過去幾天的專注時長圖表。顯示的天數會依小工具大小而有所不同。</string>
     <string name="dnd_permission_message">啟用「%1$s」的權限</string>
     <string name="duration">時長</string>
