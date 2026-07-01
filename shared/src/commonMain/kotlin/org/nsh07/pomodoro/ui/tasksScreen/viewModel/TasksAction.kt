@@ -15,16 +15,14 @@
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
-package org.nsh07.pomodoro.ui.timerScreen.viewModel
+package org.nsh07.pomodoro.ui.tasksScreen.viewModel
 
-sealed interface TimerAction {
-    data class SkipTimer(val fromButton: Boolean) : TimerAction
-    data class SetInfiniteFocus(val value: Boolean) : TimerAction
-    data class SetCurrentTask(val id: Long?, val title: String?) : TimerAction
-
-    data object ResetTimer : TimerAction
-    data object UndoReset : TimerAction
-    data object StopAlarm : TimerAction
-    data object ToggleTimer : TimerAction
-    data object ClearCurrentTask : TimerAction
+sealed interface TasksAction {
+    data class SetNewTaskTitle(val title: String) : TasksAction
+    data class SetShowLater(val value: Boolean) : TasksAction
+    data class AddTask(val isToday: Boolean = true) : TasksAction
+    data class SetDone(val id: Long, val isDone: Boolean) : TasksAction
+    data class MoveToToday(val id: Long) : TasksAction
+    data class MoveToLater(val id: Long) : TasksAction
+    data class DeleteTask(val id: Long) : TasksAction
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2025-2026 Nishant Mishra
+ * Copyright (c) 2026 Nishant Mishra
  *
  * This file is part of Tomato - a minimalist pomodoro timer for Android.
  *
@@ -15,28 +15,16 @@
  * If not, see <https://www.gnu.org/licenses/>.
  */
 
-package org.nsh07.pomodoro.ui.timerScreen.viewModel
+package org.nsh07.pomodoro.ui.tasksScreen.viewModel
 
 import androidx.compose.runtime.Immutable
+import org.nsh07.pomodoro.data.TaskItem
 
 @Immutable
-data class TimerState(
-    val timerMode: TimerMode = TimerMode.FOCUS,
-    val timeStr: String = "25:00",
-    val totalTime: Long = 25 * 60,
-    val timerRunning: Boolean = false,
-    val nextTimerMode: TimerMode = TimerMode.SHORT_BREAK,
-    val nextTimeStr: String = "5:00",
-    val showBrandTitle: Boolean = true,
-    val currentFocusCount: Int = 1,
-    val totalFocusCount: Int = 4,
-    val alarmRinging: Boolean = false,
-    val serviceRunning: Boolean = false,
-    val infiniteFocus: Boolean = false,
-    val currentTaskId: Long? = null,
-    val currentTaskTitle: String? = null
+data class TasksState(
+    val activeTodayTasks: List<TaskItem> = emptyList(),
+    val completedTodayTasks: List<TaskItem> = emptyList(),
+    val laterTasks: List<TaskItem> = emptyList(),
+    val newTaskTitle: String = "",
+    val showLater: Boolean = false
 )
-
-enum class TimerMode {
-    FOCUS, SHORT_BREAK, LONG_BREAK, BRAND
-}

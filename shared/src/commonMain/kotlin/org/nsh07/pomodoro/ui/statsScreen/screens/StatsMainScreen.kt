@@ -67,6 +67,7 @@ import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 import org.koin.compose.koinInject
 import org.nsh07.pomodoro.data.Stat
+import org.nsh07.pomodoro.data.TaskFocusSummary
 import org.nsh07.pomodoro.di.AppInfo
 import org.nsh07.pomodoro.ui.Screen
 import org.nsh07.pomodoro.ui.mergePaddingValues
@@ -83,16 +84,20 @@ import org.nsh07.pomodoro.ui.theme.TomatoShapeDefaults.topListItemShape
 import org.nsh07.pomodoro.utils.millisecondsToHoursMinutes
 import tomato.shared.generated.resources.Res
 import tomato.shared.generated.resources.break_
+import tomato.shared.generated.resources.completed_tasks
 import tomato.shared.generated.resources.focus
 import tomato.shared.generated.resources.focus_per_day_avg
 import tomato.shared.generated.resources.last_month
 import tomato.shared.generated.resources.last_week
 import tomato.shared.generated.resources.last_year
 import tomato.shared.generated.resources.lifetime
+import tomato.shared.generated.resources.pomodoros
 import tomato.shared.generated.resources.query_stats
 import tomato.shared.generated.resources.stats
+import tomato.shared.generated.resources.task_focus
 import tomato.shared.generated.resources.today
 import tomato.shared.generated.resources.total
+import tomato.shared.generated.resources.unassigned
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -108,6 +113,10 @@ fun SharedTransitionScope.StatsMainScreen(
     lastYearSummaryChartXLabelKey: ExtraStore.Key<List<String>>,
     todayStat: Stat?,
     allTimeTotalFocus: Long?,
+    todayCompletedTaskCount: Int,
+    todayCompletedPomodoroCount: Int,
+    todayUnassignedFocusTotal: Long,
+    taskFocusRanking: List<TaskFocusSummary>,
     lastWeekAverageFocusTimes: List<Long>,
     lastMonthAverageFocusTimes: List<Long>,
     lastYearAverageFocusTimes: List<Long>,
@@ -242,6 +251,77 @@ fun SharedTransitionScope.StatsMainScreen(
                                 maxLines = 1,
                                 autoSize = TextAutoSize.StepBased(maxFontSize = typography.displaySmall.fontSize)
                             )
+                        }
+                    }
+                }
+            }
+
+            item { Spacer(Modifier.height(12.dp)) }
+
+            item {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    SummaryTile(
+                        label = stringResource(Res.string.pomodoros),
+                        value = todayCompletedPomodoroCount.toString(),
+                        modifier = Modifier.weight(1f)
+                    )
+                    SummaryTile(
+                        label = stringResource(Res.string.completed_tasks),
+                        value = todayCompletedTaskCount.toString(),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            item { Spacer(Modifier.height(12.dp)) }
+
+            item {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(cardShape)
+                        .background(listItemColors.containerColor)
+                        .padding(20.dp)
+                ) {
+                    Text(
+                        stringResource(Res.string.task_focus),
+                        style = typography.headlineSmall
+                    )
+
+                    if (taskFocusRanking.isEmpty()) {
+                        Text(
+                            stringResource(Res.string.unassigned) + ": " +
+                                    millisecondsToHoursMinutes(
+                                        todayUnassignedFocusTotal,
+                                        hoursMinutesFormat
+                                    ),
+                            style = typography.bodyLarge,
+                            color = colorScheme.onSurfaceVariant
+                        )
+                    } else {
+                        taskFocusRanking.forEach { item ->
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(
+                                    item.title ?: stringResource(Res.string.unassigned),
+                                    style = typography.bodyLarge,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Text(
+                                    millisecondsToHoursMinutes(
+                                        item.totalFocusMs,
+                                        hoursMinutesFormat
+                                    ),
+                                    style = typography.labelLarge,
+                                    color = colorScheme.onSurfaceVariant
+                                )
+                            }
                         }
                     }
                 }
@@ -607,5 +687,32 @@ fun SharedTransitionScope.StatsMainScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SummaryTile(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier
+            .clip(cardShape)
+            .background(listItemColors.containerColor)
+            .padding(20.dp)
+    ) {
+        Text(
+            label,
+            style = typography.titleMedium,
+            color = colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Text(
+            value,
+            style = typography.displaySmall,
+            maxLines = 1
+        )
     }
 }

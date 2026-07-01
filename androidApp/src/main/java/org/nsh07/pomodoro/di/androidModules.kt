@@ -34,11 +34,15 @@ import org.koin.dsl.module
 import org.koin.plugin.module.dsl.create
 import org.koin.plugin.module.dsl.single
 import org.nsh07.pomodoro.R
+import org.nsh07.pomodoro.data.AppFocusSessionRepository
 import org.nsh07.pomodoro.data.AppPreferenceRepository
 import org.nsh07.pomodoro.data.AppStatRepository
+import org.nsh07.pomodoro.data.AppTaskRepository
+import org.nsh07.pomodoro.data.FocusSessionRepository
 import org.nsh07.pomodoro.data.PreferenceRepository
 import org.nsh07.pomodoro.data.StatRepository
 import org.nsh07.pomodoro.data.StateRepository
+import org.nsh07.pomodoro.data.TaskRepository
 import org.nsh07.pomodoro.service.AppServiceHelper
 import org.nsh07.pomodoro.service.ServiceHelper
 import org.nsh07.pomodoro.service.addTimerActions
@@ -49,6 +53,8 @@ val servicesModule = module {
     single<AppInfo> { create(::createAppInfo) }
     single<AppStatRepository>() bind StatRepository::class
     single<AppPreferenceRepository>() bind PreferenceRepository::class
+    single<AppTaskRepository>() bind TaskRepository::class
+    single<AppFocusSessionRepository>() bind FocusSessionRepository::class
     single<StateRepository>()
     single<AppServiceHelper>() bind ServiceHelper::class
 

@@ -75,14 +75,35 @@ class TimerViewModel(
     }
 
     fun onAction(action: TimerAction) {
-        if (action !is TimerAction.SetInfiniteFocus) serviceHelper.startService(action)
-        else {
-            stateRepository.timerState.update {
-                it.copy(
-                    infiniteFocus = action.value
-                )
+        when (action) {
+            is TimerAction.SetInfiniteFocus -> {
+                stateRepository.timerState.update {
+                    it.copy(
+                        infiniteFocus = action.value
+                    )
+                }
+                onAction(TimerAction.ResetTimer)
             }
-            onAction(TimerAction.ResetTimer)
+
+            is TimerAction.SetCurrentTask -> {
+                stateRepository.timerState.update {
+                    it.copy(
+                        currentTaskId = action.id,
+                        currentTaskTitle = action.title
+                    )
+                }
+            }
+
+            TimerAction.ClearCurrentTask -> {
+                stateRepository.timerState.update {
+                    it.copy(
+                        currentTaskId = null,
+                        currentTaskTitle = null
+                    )
+                }
+            }
+
+            else -> serviceHelper.startService(action)
         }
     }
 }

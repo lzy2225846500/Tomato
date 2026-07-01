@@ -18,6 +18,7 @@
 package org.nsh07.pomodoro.data
 
 import androidx.room.TypeConverter
+import java.time.Instant
 import java.time.LocalDate
 
 class Converters {
@@ -29,5 +30,15 @@ class Converters {
     @TypeConverter
     fun stringToLocalDate(date: String?): LocalDate? {
         return if (date != null) LocalDate.parse(date) else null
+    }
+
+    @TypeConverter
+    fun instantToString(instant: Instant?): String? {
+        return instant?.toString()
+    }
+
+    @TypeConverter
+    fun stringToInstant(instant: String?): Instant? {
+        return if (instant != null) Instant.parse(instant) else null
     }
 }

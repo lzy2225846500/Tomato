@@ -24,6 +24,9 @@ import org.jetbrains.compose.resources.StringResource
 
 sealed class Screen : NavKey {
     @Serializable
+    object Today : Screen()
+
+    @Serializable
     object Timer : Screen()
 
     @Serializable

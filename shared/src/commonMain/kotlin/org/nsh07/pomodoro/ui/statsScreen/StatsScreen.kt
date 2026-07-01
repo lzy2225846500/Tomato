@@ -112,6 +112,10 @@ fun StatsScreenRoot(
                     val todayStat by viewModel.todayStat.collectAsStateWithLifecycle(null)
                     val allTimeTotalFocus by
                     viewModel.allTimeTotalFocus.collectAsStateWithLifecycle(null)
+                    val todayCompletedTaskCount by viewModel.todayCompletedTaskCount.collectAsStateWithLifecycle()
+                    val todayCompletedPomodoroCount by viewModel.todayCompletedPomodoroCount.collectAsStateWithLifecycle()
+                    val todayUnassignedFocusTotal by viewModel.todayUnassignedFocusTotal.collectAsStateWithLifecycle()
+                    val taskFocusRanking by viewModel.taskFocusRanking.collectAsStateWithLifecycle()
 
                     val lastWeekFocusBreakdownValues by viewModel.lastWeekFocusBreakdownValues.collectAsStateWithLifecycle()
                     val lastMonthFocusBreakdownValues by viewModel.lastMonthFocusBreakdownValues.collectAsStateWithLifecycle()
@@ -129,6 +133,10 @@ fun StatsScreenRoot(
                         lastYearSummaryChartXLabelKey = viewModel.lastYearXLabelKey,
                         todayStat = todayStat,
                         allTimeTotalFocus = allTimeTotalFocus,
+                        todayCompletedTaskCount = todayCompletedTaskCount,
+                        todayCompletedPomodoroCount = todayCompletedPomodoroCount,
+                        todayUnassignedFocusTotal = todayUnassignedFocusTotal,
+                        taskFocusRanking = taskFocusRanking,
                         lastWeekAverageFocusTimes = lastWeekFocusBreakdownValues.first,
                         lastMonthAverageFocusTimes = lastMonthFocusBreakdownValues.first,
                         lastYearAverageFocusTimes = lastYearFocusBreakdownValues.first,

@@ -40,8 +40,11 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import org.nsh07.pomodoro.data.FocusSessionRepository
 import org.nsh07.pomodoro.data.Stat
 import org.nsh07.pomodoro.data.StatRepository
+import org.nsh07.pomodoro.data.TaskFocusSummary
+import org.nsh07.pomodoro.data.TaskRepository
 import org.nsh07.pomodoro.di.AppInfo
 import org.nsh07.pomodoro.ui.Screen
 import java.time.DayOfWeek
@@ -52,6 +55,8 @@ import java.util.Locale
 
 class StatsViewModel(
     private val statRepository: StatRepository,
+    taskRepository: TaskRepository,
+    focusSessionRepository: FocusSessionRepository,
     private val appInfo: AppInfo,
 ) : ViewModel() {
     val backStack = mutableStateListOf<Screen.Stats>(Screen.Stats.Main)
@@ -100,6 +105,38 @@ class StatsViewModel(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = null
+        )
+
+    val todayCompletedTaskCount = taskRepository
+        .getTodayCompletedCount()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0
+        )
+
+    val todayCompletedPomodoroCount = focusSessionRepository
+        .getTodayCompletedPomodoroCount()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0
+        )
+
+    val todayUnassignedFocusTotal = focusSessionRepository
+        .getTodayUnassignedFocusTotal()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = 0
+        )
+
+    val taskFocusRanking: StateFlow<List<TaskFocusSummary>> = focusSessionRepository
+        .getTaskFocusRanking(days = 7, limit = 5)
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
         )
 
     private val lastWeekStatsFlow = statRepository.getLastNDaysStats(7).filter { it.isNotEmpty() }

@@ -67,6 +67,7 @@ import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
 import androidx.compose.material3.FilledIconToggleButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
 import androidx.compose.material3.MaterialTheme.colorScheme
@@ -135,6 +136,7 @@ import org.nsh07.pomodoro.utils.millisecondsToStr
 import tomato.shared.generated.resources.Res
 import tomato.shared.generated.resources.app_name
 import tomato.shared.generated.resources.app_name_plus
+import tomato.shared.generated.resources.clear
 import tomato.shared.generated.resources.check_circle_40dp
 import tomato.shared.generated.resources.focus
 import tomato.shared.generated.resources.in_progress_40dp
@@ -440,6 +442,36 @@ fun SharedTransitionScope.TimerScreen(
                                                 style = typography.titleLarge,
                                                 color = colorScheme.outline
                                             )
+                                        }
+                                        AnimatedVisibility(
+                                            visible = timerState.currentTaskTitle != null,
+                                            enter = fadeIn(motionScheme.defaultEffectsSpec()) +
+                                                    expandVertically(motionScheme.defaultSpatialSpec()),
+                                            exit = fadeOut(motionScheme.defaultEffectsSpec()) +
+                                                    shrinkVertically(motionScheme.defaultSpatialSpec())
+                                        ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.Center,
+                                                modifier = Modifier.padding(top = 8.dp)
+                                            ) {
+                                                Text(
+                                                    timerState.currentTaskTitle.orEmpty(),
+                                                    style = typography.titleMedium,
+                                                    color = colorScheme.onSurfaceVariant,
+                                                    maxLines = 1,
+                                                    textAlign = TextAlign.Center,
+                                                    modifier = Modifier.widthIn(max = 260.dp)
+                                                )
+                                                IconButton(
+                                                    onClick = { onAction(TimerAction.ClearCurrentTask) }
+                                                ) {
+                                                    Icon(
+                                                        painterResource(Res.drawable.clear),
+                                                        stringResource(Res.string.clear)
+                                                    )
+                                                }
+                                            }
                                         }
                                     }
                                 }

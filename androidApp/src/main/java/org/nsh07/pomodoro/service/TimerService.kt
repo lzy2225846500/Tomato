@@ -52,6 +52,7 @@ import kotlinx.coroutines.sync.withLock
 import org.koin.android.ext.android.inject
 import org.koin.core.component.KoinComponent
 import org.nsh07.pomodoro.R
+import org.nsh07.pomodoro.data.FocusSessionRepository
 import org.nsh07.pomodoro.data.StatRepository
 import org.nsh07.pomodoro.data.StateRepository
 import org.nsh07.pomodoro.di.ActivityCallbacks
@@ -65,6 +66,7 @@ class TimerService : Service(), KoinComponent {
 
     private val stateRepository: StateRepository by inject()
     private val statRepository: StatRepository by inject()
+    private val focusSessionRepository: FocusSessionRepository by inject()
     private val notificationManager: NotificationManagerCompat by inject()
     private val notificationManagerService: NotificationManager by inject()
     private val notificationBuilder: NotificationCompat.Builder by inject()
@@ -617,13 +619,20 @@ class TimerService : Service(), KoinComponent {
     suspend fun saveTimeToDb() {
         saveLock.withLock {
             val elapsedTime = _timerState.value.totalTime - time
+            val delta = (elapsedTime - lastSavedDuration).coerceAtLeast(0L)
             when (_timerState.value.timerMode) {
-                TimerMode.FOCUS -> statRepository.addFocusTime(
-                    (elapsedTime - lastSavedDuration).coerceAtLeast(0L)
-                )
+                TimerMode.FOCUS -> {
+                    statRepository.addFocusTime(delta)
+                    focusSessionRepository.recordFocus(
+                        taskId = _timerState.value.currentTaskId,
+                        taskTitle = _timerState.value.currentTaskTitle,
+                        durationMs = delta,
+                        completed = time <= 0
+                    )
+                }
 
                 else -> statRepository.addBreakTime(
-                    (elapsedTime - lastSavedDuration).coerceAtLeast(0L)
+                    delta
                 )
             }
             lastSavedDuration = elapsedTime

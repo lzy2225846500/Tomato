@@ -92,21 +92,25 @@ import org.nsh07.pomodoro.ui.settingsScreen.SettingsScreenRoot
 import org.nsh07.pomodoro.ui.settingsScreen.viewModel.SettingsViewModel
 import org.nsh07.pomodoro.ui.statsScreen.StatsScreenRoot
 import org.nsh07.pomodoro.ui.statsScreen.viewModel.StatsViewModel
+import org.nsh07.pomodoro.ui.tasksScreen.TasksScreenRoot
 import org.nsh07.pomodoro.ui.timerScreen.AlarmDialog
 import org.nsh07.pomodoro.ui.timerScreen.TimerScreen
 import org.nsh07.pomodoro.ui.timerScreen.viewModel.TimerAction
 import org.nsh07.pomodoro.ui.timerScreen.viewModel.TimerMode
 import org.nsh07.pomodoro.ui.timerScreen.viewModel.TimerViewModel
 import org.nsh07.pomodoro.utils.onBack
+import org.nsh07.pomodoro.utils.onTopLevelNavigate
 import tomato.shared.generated.resources.Res
 import tomato.shared.generated.resources.monitoring
 import tomato.shared.generated.resources.monitoring_filled
 import tomato.shared.generated.resources.settings
 import tomato.shared.generated.resources.settings_filled
 import tomato.shared.generated.resources.stats
+import tomato.shared.generated.resources.today
 import tomato.shared.generated.resources.timer
 import tomato.shared.generated.resources.timer_filled
 import tomato.shared.generated.resources.timer_outlined
+import tomato.shared.generated.resources.view_day
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -132,13 +136,19 @@ fun AppScreen(
     val systemBarsInsets = WindowInsets.systemBars.asPaddingValues()
     val cutoutInsets = WindowInsets.displayCutout.asPaddingValues()
 
-    val backStack = rememberNavBackStack(Screen.Timer)
+    val backStack = rememberNavBackStack(Screen.Today)
     val toolbarScrollBehavior = FloatingToolbarDefaults.exitAlwaysScrollBehavior(
         FloatingToolbarExitDirection.Bottom
     )
 
     val mainScreens = remember {
         listOf(
+            NavItem(
+                Screen.Today,
+                Res.drawable.view_day,
+                Res.drawable.view_day,
+                Res.string.today
+            ) {},
             NavItem(
                 Screen.Timer,
                 Res.drawable.timer_outlined,
@@ -234,11 +244,10 @@ fun AppScreen(
                                     checked = selected,
                                     onCheckedChange = if (!selected) {
                                         {
-                                            if (item.route != Screen.Timer) { // Ensure the backstack does not accumulate screens
-                                                if (backStack.size < 2) backStack.add(item.route)
-                                                else backStack[1] = item.route
-                                            } else {
+                                            if (item.route == Screen.Today) {
                                                 if (backStack.size > 1) backStack.removeAt(1)
+                                            } else {
+                                                backStack.onTopLevelNavigate(item.route)
                                             }
                                         }
                                     } else {
@@ -310,6 +319,25 @@ fun AppScreen(
                         .togetherWith(fadeOut(motionScheme.defaultEffectsSpec()))
                 },
                 entryProvider = entryProvider {
+                    entry<Screen.Today> {
+                        TasksScreenRoot(
+                            contentPadding = contentPadding,
+                            onStartFocus = { task ->
+                                timerViewModel.onAction(
+                                    TimerAction.SetCurrentTask(task.id, task.title)
+                                )
+                                backStack.onTopLevelNavigate(Screen.Timer)
+                                if (!uiState.timerRunning) {
+                                    if (uiState.timerMode != TimerMode.FOCUS) {
+                                        timerViewModel.onAction(TimerAction.ResetTimer)
+                                    } else {
+                                        timerViewModel.onAction(TimerAction.ToggleTimer)
+                                    }
+                                }
+                            }
+                        )
+                    }
+
                     entry<Screen.Timer> {
                         TimerScreen(
                             timerState = uiState,
@@ -322,8 +350,7 @@ fun AppScreen(
                                 .clickable {
                                     if (!uiState.timerRunning)
                                         timerViewModel.onAction(TimerAction.ToggleTimer)
-                                    if (backStack.size < 2)
-                                        backStack.add(Screen.AOD)
+                                    backStack.onTopLevelNavigate(Screen.AOD)
                                 } else Modifier
                         )
                     }

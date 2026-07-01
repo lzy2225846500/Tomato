@@ -38,9 +38,11 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.nsh07.pomodoro.billing.BillingManager
+import org.nsh07.pomodoro.data.FocusSessionRepository
 import org.nsh07.pomodoro.data.PreferenceRepository
 import org.nsh07.pomodoro.data.StatRepository
 import org.nsh07.pomodoro.data.StateRepository
+import org.nsh07.pomodoro.data.TaskRepository
 import org.nsh07.pomodoro.service.ServiceHelper
 import org.nsh07.pomodoro.ui.Screen
 import org.nsh07.pomodoro.ui.timerScreen.viewModel.TimerAction
@@ -54,6 +56,8 @@ class SettingsViewModel(
     private val preferenceRepository: PreferenceRepository,
     private val stateRepository: StateRepository,
     private val statRepository: StatRepository,
+    private val taskRepository: TaskRepository,
+    private val focusSessionRepository: FocusSessionRepository,
     private val serviceHelper: ServiceHelper
 ) : ViewModel() {
     private val time: MutableStateFlow<Long> = stateRepository.time
@@ -158,6 +162,8 @@ class SettingsViewModel(
 
             serviceHelper.startService(TimerAction.ResetTimer)
             statRepository.deleteAllStats()
+            taskRepository.deleteAllTasks()
+            focusSessionRepository.deleteAllSessions()
             _settingsState.update {
                 it.copy(isShowingEraseDataDialog = false)
             }

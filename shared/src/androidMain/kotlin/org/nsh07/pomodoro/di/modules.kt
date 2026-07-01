@@ -30,18 +30,22 @@ import org.nsh07.pomodoro.data.BackupRestoreManager
 import org.nsh07.pomodoro.ui.settingsScreen.screens.backupRestore.viewModel.BackupRestoreViewModel
 import org.nsh07.pomodoro.ui.settingsScreen.viewModel.SettingsViewModel
 import org.nsh07.pomodoro.ui.statsScreen.viewModel.StatsViewModel
+import org.nsh07.pomodoro.ui.tasksScreen.viewModel.TasksViewModel
 import org.nsh07.pomodoro.ui.timerScreen.viewModel.TimerViewModel
 
 val dbModule = module {
     single<AppDatabase> { create(::createDatabase) }
     single { get<AppDatabase>().preferenceDao() }
     single { get<AppDatabase>().statDao() }
+    single { get<AppDatabase>().taskDao() }
+    single { get<AppDatabase>().focusSessionDao() }
     single { get<AppDatabase>().systemDao() }
 }
 
 val viewModels = module {
     viewModel<BackupRestoreViewModel>()
     viewModel<TimerViewModel>()
+    viewModel<TasksViewModel>()
     viewModel<SettingsViewModel>()
     viewModel<StatsViewModel>()
 }

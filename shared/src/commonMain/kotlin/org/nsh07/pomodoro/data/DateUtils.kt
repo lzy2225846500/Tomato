@@ -17,31 +17,9 @@
 
 package org.nsh07.pomodoro.data
 
-import androidx.room.AutoMigration
-import androidx.room.Database
-import androidx.room.RoomDatabase
-import androidx.room.TypeConverters
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
 
-@Database(
-    entities = [
-        IntPreference::class,
-        BooleanPreference::class,
-        StringPreference::class,
-        Stat::class,
-        TaskItem::class,
-        FocusSession::class
-    ],
-    version = 3,
-    autoMigrations = [
-        AutoMigration(from = 1, to = 2),
-        AutoMigration(from = 2, to = 3)
-    ]
-)
-@TypeConverters(Converters::class)
-abstract class AppDatabase : RoomDatabase() {
-    abstract fun preferenceDao(): PreferenceDao
-    abstract fun statDao(): StatDao
-    abstract fun taskDao(): TaskDao
-    abstract fun focusSessionDao(): FocusSessionDao
-    abstract fun systemDao(): SystemDao
-}
+fun LocalDate.startInstant(): Instant =
+    atStartOfDay(ZoneId.systemDefault()).toInstant()

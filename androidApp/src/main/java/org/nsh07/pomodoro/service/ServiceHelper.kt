@@ -64,6 +64,14 @@ class AppServiceHelper(private val context: Context) : ServiceHelper {
             is TimerAction.SetInfiniteFocus -> {
                 Log.e("StartService", "Invalid action: $action")
             }
+
+            is TimerAction.SetCurrentTask -> {
+                Log.e("StartService", "Invalid action: $action")
+            }
+
+            TimerAction.ClearCurrentTask -> {
+                Log.e("StartService", "Invalid action: $action")
+            }
         }
     }
 }
