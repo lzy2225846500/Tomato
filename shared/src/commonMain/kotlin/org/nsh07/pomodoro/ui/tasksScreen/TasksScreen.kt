@@ -27,28 +27,41 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.AlertDialogDefaults
+import androidx.compose.material3.BasicAlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme.colorScheme
+import androidx.compose.material3.MaterialTheme.shapes
 import androidx.compose.material3.MaterialTheme.typography
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedListItem
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
@@ -67,20 +80,41 @@ import org.nsh07.pomodoro.ui.theme.CustomColors.listItemColors
 import org.nsh07.pomodoro.ui.theme.CustomColors.topBarColors
 import org.nsh07.pomodoro.ui.theme.LocalAppFonts
 import org.nsh07.pomodoro.ui.theme.TomatoShapeDefaults.segmentedListItemShapes
+import org.nsh07.pomodoro.utils.millisecondsToHoursMinutes
 import tomato.shared.generated.resources.Res
 import tomato.shared.generated.resources.add_task
-import tomato.shared.generated.resources.completed_tasks
+import tomato.shared.generated.resources.cancel
+import tomato.shared.generated.resources.change_due_date
+import tomato.shared.generated.resources.check
 import tomato.shared.generated.resources.check_circle_40dp
-import tomato.shared.generated.resources.focus
+import tomato.shared.generated.resources.clear_due_date
+import tomato.shared.generated.resources.completed_tasks
+import tomato.shared.generated.resources.current_task
+import tomato.shared.generated.resources.due_date
+import tomato.shared.generated.resources.due_today
+import tomato.shared.generated.resources.due_tomorrow
+import tomato.shared.generated.resources.due_weekday
 import tomato.shared.generated.resources.folder
+import tomato.shared.generated.resources.hours_and_minutes_format
 import tomato.shared.generated.resources.later
 import tomato.shared.generated.resources.less
 import tomato.shared.generated.resources.move_to_later
 import tomato.shared.generated.resources.move_to_today
+import tomato.shared.generated.resources.no_current_task
+import tomato.shared.generated.resources.no_current_task_desc
 import tomato.shared.generated.resources.no_tasks_today
+import tomato.shared.generated.resources.overdue
 import tomato.shared.generated.resources.play
+import tomato.shared.generated.resources.set_due_date
+import tomato.shared.generated.resources.start_focus
 import tomato.shared.generated.resources.task_title
 import tomato.shared.generated.resources.today
+import tomato.shared.generated.resources.today_summary_focus
+import tomato.shared.generated.resources.today_summary_pomodoros
+import tomato.shared.generated.resources.today_summary_tasks
+import tomato.shared.generated.resources.today_tasks
+import tomato.shared.generated.resources.view_day
+import java.time.LocalDate
 
 @Composable
 fun TasksScreenRoot(
@@ -144,6 +178,29 @@ fun TasksScreen(
             item { Spacer(Modifier.height(14.dp)) }
 
             item {
+                TodaySummaryRow(
+                    completedTasks = state.todayCompletedTaskCount,
+                    totalTasks = state.todayTotalTaskCount,
+                    pomodoros = state.todayCompletedPomodoroCount,
+                    focusTotal = state.todayFocusTotal
+                )
+            }
+
+            item { Spacer(Modifier.height(10.dp)) }
+
+            item {
+                CurrentTaskPanel(
+                    task = state.currentTask,
+                    focusTotal = state.todayFocusTotal,
+                    onStartFocus = onStartFocus,
+                    onSetDone = { task, isDone -> onAction(TasksAction.SetDone(task.id, isDone)) },
+                    onMoveToLater = { task -> onAction(TasksAction.MoveToLater(task.id)) }
+                )
+            }
+
+            item { Spacer(Modifier.height(10.dp)) }
+
+            item {
                 AddTaskRow(
                     title = state.newTaskTitle,
                     onTitleChange = { onAction(TasksAction.SetNewTaskTitle(it)) },
@@ -162,6 +219,13 @@ fun TasksScreen(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)
                     )
                 }
+            } else {
+                item {
+                    TaskSectionHeader(
+                        title = stringResource(Res.string.today_tasks),
+                        count = state.activeTodayTasks.size
+                    )
+                }
             }
 
             itemsIndexed(state.activeTodayTasks, key = { _, task -> task.id }) { index, task ->
@@ -172,6 +236,7 @@ fun TasksScreen(
                     onSetDone = { onAction(TasksAction.SetDone(task.id, it)) },
                     onStartFocus = { onStartFocus(task) },
                     onMove = { onAction(TasksAction.MoveToLater(task.id)) },
+                    onEditDueDate = { onAction(TasksAction.OpenDueDateEditor(task)) },
                     moveLabel = stringResource(Res.string.move_to_later)
                 )
             }
@@ -179,11 +244,9 @@ fun TasksScreen(
             if (state.completedTodayTasks.isNotEmpty()) {
                 item { Spacer(Modifier.height(12.dp)) }
                 item {
-                    Text(
-                        stringResource(Res.string.completed_tasks),
-                        style = typography.titleMedium,
-                        color = colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    TaskSectionHeader(
+                        title = stringResource(Res.string.completed_tasks),
+                        count = state.completedTodayTasks.size
                     )
                 }
                 itemsIndexed(state.completedTodayTasks, key = { _, task -> task.id }) { index, task ->
@@ -194,6 +257,7 @@ fun TasksScreen(
                         onSetDone = { onAction(TasksAction.SetDone(task.id, it)) },
                         onStartFocus = { onStartFocus(task) },
                         onMove = { onAction(TasksAction.MoveToLater(task.id)) },
+                        onEditDueDate = { onAction(TasksAction.OpenDueDateEditor(task)) },
                         moveLabel = stringResource(Res.string.move_to_later)
                     )
                 }
@@ -218,8 +282,144 @@ fun TasksScreen(
                         onSetDone = { onAction(TasksAction.SetDone(task.id, it)) },
                         onStartFocus = { onStartFocus(task) },
                         onMove = { onAction(TasksAction.MoveToToday(task.id)) },
+                        onEditDueDate = { onAction(TasksAction.OpenDueDateEditor(task)) },
                         moveLabel = stringResource(Res.string.move_to_today)
                     )
+                }
+            }
+        }
+
+        state.dueDateEditorTask?.let { task ->
+            DueDateEditorDialog(
+                task = task,
+                onDismiss = { onAction(TasksAction.DismissDueDateEditor) },
+                onSetDueDate = { onAction(TasksAction.SetDueDate(task.id, it)) },
+                onClearDueDate = { onAction(TasksAction.ClearDueDate(task.id)) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun TodaySummaryRow(completedTasks: Int, totalTasks: Int, pomodoros: Int, focusTotal: Long) {
+    val hoursMinutesFormat = stringResource(Res.string.hours_and_minutes_format)
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        SummaryTile(
+            text = stringResource(Res.string.today_summary_tasks, completedTasks, totalTasks),
+            modifier = Modifier.weight(1f)
+        )
+        SummaryTile(
+            text = stringResource(Res.string.today_summary_pomodoros, pomodoros),
+            modifier = Modifier.weight(1f)
+        )
+        SummaryTile(
+            text = stringResource(
+                Res.string.today_summary_focus,
+                remember(focusTotal, hoursMinutesFormat) {
+                    millisecondsToHoursMinutes(focusTotal, hoursMinutesFormat)
+                }
+            ),
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun SummaryTile(text: String, modifier: Modifier = Modifier) {
+    Surface(
+        color = colorScheme.surfaceContainerHigh,
+        contentColor = colorScheme.onSurface,
+        shape = shapes.large,
+        modifier = modifier
+    ) {
+        Text(
+            text = text,
+            style = typography.labelLarge,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp)
+        )
+    }
+}
+
+@Composable
+private fun CurrentTaskPanel(
+    task: TaskItem?,
+    focusTotal: Long,
+    onStartFocus: (TaskItem) -> Unit,
+    onSetDone: (TaskItem, Boolean) -> Unit,
+    onMoveToLater: (TaskItem) -> Unit
+) {
+    val hoursMinutesFormat = stringResource(Res.string.hours_and_minutes_format)
+    Surface(
+        color = colorScheme.primaryContainer,
+        contentColor = colorScheme.onPrimaryContainer,
+        shape = shapes.extraLarge,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text(
+                stringResource(Res.string.current_task),
+                style = typography.labelLarge,
+                color = colorScheme.onPrimaryContainer
+            )
+            if (task == null) {
+                Text(
+                    stringResource(Res.string.no_current_task),
+                    style = typography.titleMedium,
+                    color = colorScheme.onPrimaryContainer
+                )
+                Text(
+                    stringResource(Res.string.no_current_task_desc),
+                    style = typography.bodyMedium,
+                    color = colorScheme.onPrimaryContainer
+                )
+            } else {
+                Text(
+                    task.title,
+                    style = typography.titleLarge,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    color = colorScheme.onPrimaryContainer
+                )
+                DueDateChip(task)
+                Text(
+                    remember(focusTotal, hoursMinutesFormat) {
+                        millisecondsToHoursMinutes(focusTotal, hoursMinutesFormat)
+                    },
+                    style = typography.bodySmall,
+                    color = colorScheme.onPrimaryContainer
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilledTonalButton(onClick = { onStartFocus(task) }) {
+                        Icon(
+                            painterResource(Res.drawable.play),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(Res.string.start_focus))
+                    }
+                    OutlinedButton(onClick = { onSetDone(task, true) }) {
+                        Icon(
+                            painterResource(Res.drawable.check),
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    OutlinedButton(onClick = { onMoveToLater(task) }) {
+                        Icon(
+                            painterResource(Res.drawable.folder),
+                            contentDescription = stringResource(Res.string.move_to_later),
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
             }
         }
@@ -253,6 +453,28 @@ private fun AddTaskRow(
     }
 }
 
+@Composable
+private fun TaskSectionHeader(title: String, count: Int) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        Text(
+            title,
+            style = typography.titleMedium,
+            color = colorScheme.onSurfaceVariant
+        )
+        Text(
+            count.toString(),
+            style = typography.labelLarge,
+            color = colorScheme.onSurfaceVariant
+        )
+    }
+}
+
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 private fun TaskRow(
@@ -262,8 +484,14 @@ private fun TaskRow(
     onSetDone: (Boolean) -> Unit,
     onStartFocus: () -> Unit,
     onMove: () -> Unit,
+    onEditDueDate: () -> Unit,
     moveLabel: String
 ) {
+    val dueDateActionLabel = if (task.dueDate == null) {
+        stringResource(Res.string.set_due_date)
+    } else {
+        stringResource(Res.string.change_due_date)
+    }
     SegmentedListItem(
         leadingContent = {
             Checkbox(
@@ -272,19 +500,28 @@ private fun TaskRow(
             )
         },
         supportingContent = {
-            Text(
-                if (task.isToday) stringResource(Res.string.today)
-                else stringResource(Res.string.later),
-                maxLines = 1
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    if (task.isToday) stringResource(Res.string.today)
+                    else stringResource(Res.string.later),
+                    maxLines = 1
+                )
+                DueDateChip(task)
+            }
         },
         trailingContent = {
             Row {
+                IconButton(onClick = onEditDueDate) {
+                    Icon(painterResource(Res.drawable.view_day), dueDateActionLabel)
+                }
                 IconButton(onClick = onMove) {
                     Icon(painterResource(Res.drawable.folder), moveLabel)
                 }
                 IconButton(onClick = onStartFocus) {
-                    Icon(painterResource(Res.drawable.play), stringResource(Res.string.focus))
+                    Icon(painterResource(Res.drawable.play), stringResource(Res.string.start_focus))
                 }
             }
         },
@@ -300,6 +537,38 @@ private fun TaskRow(
             textDecoration = if (task.isDone) TextDecoration.LineThrough else null
         )
     }
+}
+
+@Composable
+private fun DueDateChip(task: TaskItem) {
+    val label = dueDateLabel(task.dueDate) ?: return
+    val text = when (label.key) {
+        DueDateLabelKey.OVERDUE -> stringResource(Res.string.overdue)
+        DueDateLabelKey.TODAY -> stringResource(Res.string.due_today)
+        DueDateLabelKey.TOMORROW -> stringResource(Res.string.due_tomorrow)
+        DueDateLabelKey.WEEKDAY -> stringResource(Res.string.due_weekday, label.argument.orEmpty())
+        DueDateLabelKey.DATE -> stringResource(Res.string.due_date, label.argument.orEmpty())
+    }
+    Text(
+        text = text,
+        style = typography.labelSmall,
+        color = if (label.key == DueDateLabelKey.OVERDUE) {
+            colorScheme.onErrorContainer
+        } else {
+            colorScheme.onSecondaryContainer
+        },
+        maxLines = 1,
+        modifier = Modifier
+            .clip(shapes.small)
+            .background(
+                if (label.key == DueDateLabelKey.OVERDUE) {
+                    colorScheme.errorContainer
+                } else {
+                    colorScheme.secondaryContainer
+                }
+            )
+            .padding(horizontal = 8.dp, vertical = 3.dp)
+    )
 }
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
@@ -324,5 +593,82 @@ private fun LaterHeader(
         onClick = onToggle
     ) {
         Text(stringResource(Res.string.later))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun DueDateEditorDialog(
+    task: TaskItem,
+    onDismiss: () -> Unit,
+    onSetDueDate: (LocalDate) -> Unit,
+    onClearDueDate: () -> Unit
+) {
+    val today = remember { LocalDate.now() }
+    BasicAlertDialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier
+                .wrapContentWidth()
+                .wrapContentHeight(),
+            shape = shapes.extraLarge,
+            color = colorScheme.surfaceContainerHigh,
+            tonalElevation = AlertDialogDefaults.TonalElevation
+        ) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.padding(24.dp)
+            ) {
+                Text(task.title, style = typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                DueDateDialogButton(
+                    text = stringResource(Res.string.due_today),
+                    onClick = { onSetDueDate(today) }
+                )
+                DueDateDialogButton(
+                    text = stringResource(Res.string.due_tomorrow),
+                    onClick = { onSetDueDate(today.plusDays(1)) }
+                )
+                DueDateDialogButton(
+                    text = dueDateLabelText(today.plusDays(7)),
+                    onClick = { onSetDueDate(today.plusDays(7)) }
+                )
+                DueDateDialogButton(
+                    text = stringResource(Res.string.clear_due_date),
+                    onClick = onClearDueDate
+                )
+                Row(
+                    horizontalArrangement = Arrangement.End,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    TextButton(
+                        onClick = onDismiss,
+                        shapes = ButtonDefaults.shapes()
+                    ) {
+                        Text(stringResource(Res.string.cancel))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DueDateDialogButton(text: String, onClick: () -> Unit) {
+    TextButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text(text)
+    }
+}
+
+@Composable
+private fun dueDateLabelText(date: LocalDate): String {
+    val label = dueDateLabel(date) ?: return ""
+    return when (label.key) {
+        DueDateLabelKey.OVERDUE -> stringResource(Res.string.overdue)
+        DueDateLabelKey.TODAY -> stringResource(Res.string.due_today)
+        DueDateLabelKey.TOMORROW -> stringResource(Res.string.due_tomorrow)
+        DueDateLabelKey.WEEKDAY -> stringResource(Res.string.due_weekday, label.argument.orEmpty())
+        DueDateLabelKey.DATE -> stringResource(Res.string.due_date, label.argument.orEmpty())
     }
 }
