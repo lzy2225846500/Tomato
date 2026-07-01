@@ -18,9 +18,11 @@
 package org.nsh07.pomodoro.data
 
 import androidx.compose.runtime.Immutable
+import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.time.Instant
+import java.time.LocalDate
 
 @Immutable
 @Entity(tableName = "task_item")
@@ -30,6 +32,9 @@ data class TaskItem(
     val title: String,
     val isDone: Boolean = false,
     val isToday: Boolean = true,
+    @ColumnInfo(defaultValue = "0")
+    val sortOrder: Long = 0,
+    val dueDate: LocalDate? = null,
     val createdAt: Instant,
     val completedAt: Instant? = null
 )

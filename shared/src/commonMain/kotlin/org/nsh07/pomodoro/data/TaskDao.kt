@@ -23,6 +23,7 @@ import androidx.room.OnConflictStrategy.Companion.REPLACE
 import androidx.room.Query
 import kotlinx.coroutines.flow.Flow
 import java.time.Instant
+import java.time.LocalDate
 
 @Dao
 interface TaskDao {
@@ -35,8 +36,17 @@ interface TaskDao {
     @Query("UPDATE task_item SET isDone = :isDone, completedAt = :completedAt WHERE id = :id")
     suspend fun setDone(id: Long, isDone: Boolean, completedAt: Instant?)
 
+    @Query("UPDATE task_item SET isDone = :isDone, completedAt = :completedAt, sortOrder = :sortOrder WHERE id = :id")
+    suspend fun setDone(id: Long, isDone: Boolean, completedAt: Instant?, sortOrder: Long)
+
     @Query("UPDATE task_item SET isToday = :isToday WHERE id = :id")
     suspend fun setToday(id: Long, isToday: Boolean)
+
+    @Query("UPDATE task_item SET isToday = :isToday, sortOrder = :sortOrder WHERE id = :id")
+    suspend fun setSectionAndOrder(id: Long, isToday: Boolean, sortOrder: Long)
+
+    @Query("UPDATE task_item SET dueDate = :dueDate WHERE id = :id")
+    suspend fun setDueDate(id: Long, dueDate: LocalDate?)
 
     @Query("DELETE FROM task_item WHERE id = :id")
     suspend fun deleteTask(id: Long)
@@ -47,23 +57,26 @@ interface TaskDao {
     @Query(
         "SELECT * FROM task_item " +
                 "WHERE isToday = 1 AND isDone = 0 " +
-                "ORDER BY createdAt ASC"
+                "ORDER BY sortOrder ASC, id ASC"
     )
     fun getActiveTodayTasks(): Flow<List<TaskItem>>
 
     @Query(
         "SELECT * FROM task_item " +
                 "WHERE isToday = 1 AND isDone = 1 " +
-                "ORDER BY completedAt DESC"
+                "ORDER BY completedAt DESC, id DESC"
     )
     fun getCompletedTodayTasks(): Flow<List<TaskItem>>
 
     @Query(
         "SELECT * FROM task_item " +
                 "WHERE isToday = 0 AND isDone = 0 " +
-                "ORDER BY createdAt ASC"
+                "ORDER BY sortOrder ASC, id ASC"
     )
     fun getLaterTasks(): Flow<List<TaskItem>>
+
+    @Query("SELECT COALESCE(MAX(sortOrder), -1) FROM task_item WHERE isToday = :isToday AND isDone = 0")
+    suspend fun getMaxSortOrder(isToday: Boolean): Long
 
     @Query(
         "SELECT COUNT(*) FROM task_item " +

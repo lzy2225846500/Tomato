@@ -19,6 +19,9 @@ package org.nsh07.pomodoro.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.SQLiteConnection
+import androidx.sqlite.execSQL
 import org.koin.dsl.bind
 import org.koin.dsl.module
 import org.koin.plugin.module.dsl.create
@@ -54,10 +57,32 @@ val androidModule = module {
     single<AndroidBackupRestoreManager>() bind BackupRestoreManager::class
 }
 
+private val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(connection: SQLiteConnection) {
+        connection.execSQL("ALTER TABLE task_item ADD COLUMN sortOrder INTEGER NOT NULL DEFAULT 0")
+        connection.execSQL("ALTER TABLE task_item ADD COLUMN dueDate TEXT")
+        connection.execSQL(
+            """
+            UPDATE task_item
+            SET sortOrder = (
+                SELECT COUNT(*)
+                FROM task_item AS earlier
+                WHERE earlier.isDone = task_item.isDone
+                    AND earlier.isToday = task_item.isToday
+                    AND (
+                        earlier.createdAt < task_item.createdAt
+                        OR (earlier.createdAt = task_item.createdAt AND earlier.id <= task_item.id)
+                    )
+            ) - 1
+            """.trimIndent()
+        )
+    }
+}
+
 private fun createDatabase(context: Context): AppDatabase {
     return Room.databaseBuilder(
         context,
         AppDatabase::class.java,
         "app_database"
-    ).build()
+    ).addMigrations(MIGRATION_3_4).build()
 }
