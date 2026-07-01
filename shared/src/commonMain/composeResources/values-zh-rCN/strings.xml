@@ -155,4 +155,21 @@
     <string name="infinite_focus">无限专注时长</string>
     <string name="settings_infinite_focus_tip">长按计时器时钟来启用无限专注模式</string>
     <string name="cancel">取消</string>
+    <string name="current_task">当前任务</string>
+    <string name="start_focus">开始专注</string>
+    <string name="today_summary_tasks">%1$d/%2$d 任务</string>
+    <string name="today_summary_pomodoros">%1$d 个番茄钟</string>
+    <string name="today_summary_focus">%1$s 专注</string>
+    <string name="no_current_task">暂无当前任务</string>
+    <string name="no_current_task_desc">添加一个任务，或从稍后移入今天，来决定下一步专注什么。</string>
+    <string name="today_tasks">今日任务</string>
+    <string name="set_due_date">设置截止日期</string>
+    <string name="change_due_date">修改截止日期</string>
+    <string name="clear_due_date">清除截止日期</string>
+    <string name="due_today">今天截止</string>
+    <string name="due_tomorrow">明天截止</string>
+    <string name="due_weekday">%1$s 截止</string>
+    <string name="due_date">%1$s 截止</string>
+    <string name="overdue">已逾期</string>
+    <string name="drag_task">拖动任务</string>
 </resources>

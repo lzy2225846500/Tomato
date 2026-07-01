@@ -160,4 +160,21 @@
     <string name="infinite_focus">Infinite focus</string>
     <string name="settings_infinite_focus_tip">Long press the timer clock to enable infinite focus mode</string>
     <string name="cancel">Cancel</string>
+    <string name="current_task">Current task</string>
+    <string name="start_focus">Start focus</string>
+    <string name="today_summary_tasks">%1$d/%2$d Tasks</string>
+    <string name="today_summary_pomodoros">%1$d Pomodoros</string>
+    <string name="today_summary_focus">%1$s Focus</string>
+    <string name="no_current_task">No current task</string>
+    <string name="no_current_task_desc">Add a task or move one from Later to choose what to focus on next.</string>
+    <string name="today_tasks">Today</string>
+    <string name="set_due_date">Set due date</string>
+    <string name="change_due_date">Change due date</string>
+    <string name="clear_due_date">Clear due date</string>
+    <string name="due_today">Due today</string>
+    <string name="due_tomorrow">Due tomorrow</string>
+    <string name="due_weekday">Due %1$s</string>
+    <string name="due_date">Due %1$s</string>
+    <string name="overdue">Overdue</string>
+    <string name="drag_task">Drag task</string>
 </resources>
