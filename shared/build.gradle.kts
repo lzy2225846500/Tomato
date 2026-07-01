@@ -76,6 +76,7 @@ kotlin {
 
             implementation(libs.vico.compose.m3)
             implementation(libs.material.kolor)
+            implementation(libs.reorderable)
         }
 
         androidMain.dependencies {

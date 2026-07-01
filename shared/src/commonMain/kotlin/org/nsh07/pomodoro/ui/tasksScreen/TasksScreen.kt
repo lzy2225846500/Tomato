@@ -32,6 +32,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.AlertDialogDefaults
 import androidx.compose.material3.BasicAlertDialog
@@ -57,8 +58,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -90,6 +94,8 @@ import tomato.shared.generated.resources.check_circle_40dp
 import tomato.shared.generated.resources.clear_due_date
 import tomato.shared.generated.resources.completed_tasks
 import tomato.shared.generated.resources.current_task
+import tomato.shared.generated.resources.drag_handle
+import tomato.shared.generated.resources.drag_task
 import tomato.shared.generated.resources.due_date
 import tomato.shared.generated.resources.due_today
 import tomato.shared.generated.resources.due_tomorrow
@@ -114,6 +120,9 @@ import tomato.shared.generated.resources.today_summary_pomodoros
 import tomato.shared.generated.resources.today_summary_tasks
 import tomato.shared.generated.resources.today_tasks
 import tomato.shared.generated.resources.view_day
+import sh.calvin.reorderable.ReorderableCollectionItemScope
+import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.rememberReorderableLazyListState
 import java.time.LocalDate
 
 @Composable
@@ -144,6 +153,32 @@ fun TasksScreen(
     modifier: Modifier = Modifier
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val lazyListState = rememberLazyListState()
+    val sourceRows = remember(state.activeTodayTasks, state.laterTasks, state.showLater) {
+        buildTodayVisibleRows(
+            todayTasks = state.activeTodayTasks,
+            laterTasks = state.laterTasks,
+            showLater = state.showLater
+        )
+    }
+    var visibleRows by remember { mutableStateOf(sourceRows) }
+    var pendingDrop by remember { mutableStateOf<TodayDropResult?>(null) }
+    LaunchedEffect(sourceRows) {
+        visibleRows = sourceRows
+        pendingDrop = null
+    }
+    val reorderableLazyListState = rememberReorderableLazyListState(lazyListState) { from, to ->
+        val fromRowIndex = from.index - 1
+        val toRowIndex = to.index - 1
+        val currentRows = visibleRows
+        val drop = mapVisibleDrop(currentRows, fromRowIndex, toRowIndex)
+        if (drop != null) {
+            pendingDrop = drop
+            visibleRows = currentRows.toMutableList().apply {
+                add(toRowIndex.coerceIn(0, size), removeAt(fromRowIndex))
+            }
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -168,6 +203,7 @@ fun TasksScreen(
     ) { innerPadding ->
         val insets = mergePaddingValues(innerPadding, contentPadding)
         LazyColumn(
+            state = lazyListState,
             verticalArrangement = Arrangement.spacedBy(2.dp),
             contentPadding = insets,
             modifier = Modifier
@@ -175,115 +211,96 @@ fun TasksScreen(
                 .fillMaxSize()
                 .padding(horizontal = 16.dp)
         ) {
-            item { Spacer(Modifier.height(14.dp)) }
-
-            item {
-                TodaySummaryRow(
-                    completedTasks = state.todayCompletedTaskCount,
-                    totalTasks = state.todayTotalTaskCount,
-                    pomodoros = state.todayCompletedPomodoroCount,
-                    focusTotal = state.todayFocusTotal
+            item(key = "today-workbench-header") {
+                TodayWorkbenchHeader(
+                    state = state,
+                    onAction = onAction,
+                    onStartFocus = onStartFocus
                 )
             }
 
-            item { Spacer(Modifier.height(10.dp)) }
-
-            item {
-                CurrentTaskPanel(
-                    task = state.currentTask,
-                    focusTotal = state.todayFocusTotal,
-                    onStartFocus = onStartFocus,
-                    onSetDone = { task, isDone -> onAction(TasksAction.SetDone(task.id, isDone)) },
-                    onMoveToLater = { task -> onAction(TasksAction.MoveToLater(task.id)) }
-                )
-            }
-
-            item { Spacer(Modifier.height(10.dp)) }
-
-            item {
-                AddTaskRow(
-                    title = state.newTaskTitle,
-                    onTitleChange = { onAction(TasksAction.SetNewTaskTitle(it)) },
-                    onAdd = { onAction(TasksAction.AddTask(isToday = true)) }
-                )
-            }
-
-            item { Spacer(Modifier.height(12.dp)) }
-
-            if (state.activeTodayTasks.isEmpty() && state.completedTodayTasks.isEmpty()) {
-                item {
-                    Text(
-                        stringResource(Res.string.no_tasks_today),
-                        style = typography.bodyLarge,
-                        color = colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)
-                    )
-                }
-            } else {
-                item {
-                    TaskSectionHeader(
+            itemsIndexed(visibleRows, key = { _, row -> row.key }) { _, row ->
+                when (row) {
+                    TodayVisibleRow.TodayHeader -> TaskSectionHeader(
                         title = stringResource(Res.string.today_tasks),
                         count = state.activeTodayTasks.size
                     )
+
+                    TodayVisibleRow.LaterHeader -> LaterHeader(
+                        showLater = state.showLater,
+                        count = state.laterTasks.size,
+                        onToggle = { onAction(TasksAction.SetShowLater(!state.showLater)) }
+                    )
+
+                    is TodayVisibleRow.TodayTask,
+                    is TodayVisibleRow.LaterTask -> {
+                        val task = row.taskOrNull() ?: return@itemsIndexed
+                        val sectionTaskIds = if (task.isToday) {
+                            visibleRows.filterIsInstance<TodayVisibleRow.TodayTask>().map { it.task.id }
+                        } else {
+                            visibleRows.filterIsInstance<TodayVisibleRow.LaterTask>().map { it.task.id }
+                        }
+                        ReorderableItem(reorderableLazyListState, key = row.key) { isDragging ->
+                            TaskRow(
+                                task = task,
+                                index = sectionTaskIds.indexOf(task.id),
+                                count = sectionTaskIds.size,
+                                isDragging = isDragging,
+                                dragScope = this,
+                                onDragStopped = {
+                                    pendingDrop?.let { drop ->
+                                        onAction(
+                                            TasksAction.MoveToSection(
+                                                taskId = drop.taskId,
+                                                targetIsToday = drop.targetIsToday,
+                                                targetIndex = drop.targetIndex
+                                            )
+                                        )
+                                    }
+                                    pendingDrop = null
+                                },
+                                onSetDone = { onAction(TasksAction.SetDone(task.id, it)) },
+                                onStartFocus = { onStartFocus(task) },
+                                onMove = {
+                                    onAction(
+                                        if (task.isToday) {
+                                            TasksAction.MoveToLater(task.id)
+                                        } else {
+                                            TasksAction.MoveToToday(task.id)
+                                        }
+                                    )
+                                },
+                                onEditDueDate = { onAction(TasksAction.OpenDueDateEditor(task)) },
+                                moveLabel = stringResource(
+                                    if (task.isToday) Res.string.move_to_later else Res.string.move_to_today
+                                )
+                            )
+                        }
+                    }
                 }
             }
 
-            itemsIndexed(state.activeTodayTasks, key = { _, task -> task.id }) { index, task ->
-                TaskRow(
-                    task = task,
-                    index = index,
-                    count = state.activeTodayTasks.size,
-                    onSetDone = { onAction(TasksAction.SetDone(task.id, it)) },
-                    onStartFocus = { onStartFocus(task) },
-                    onMove = { onAction(TasksAction.MoveToLater(task.id)) },
-                    onEditDueDate = { onAction(TasksAction.OpenDueDateEditor(task)) },
-                    moveLabel = stringResource(Res.string.move_to_later)
-                )
-            }
-
             if (state.completedTodayTasks.isNotEmpty()) {
-                item { Spacer(Modifier.height(12.dp)) }
-                item {
+                item(key = "completed-spacer") { Spacer(Modifier.height(12.dp)) }
+                item(key = "completed-header") {
                     TaskSectionHeader(
                         title = stringResource(Res.string.completed_tasks),
                         count = state.completedTodayTasks.size
                     )
                 }
-                itemsIndexed(state.completedTodayTasks, key = { _, task -> task.id }) { index, task ->
+                itemsIndexed(state.completedTodayTasks, key = { _, task -> "completed-${task.id}" }) { index, task ->
                     TaskRow(
                         task = task,
                         index = index,
                         count = state.completedTodayTasks.size,
+                        isDragging = false,
+                        dragScope = null,
+                        onDragStopped = {},
                         onSetDone = { onAction(TasksAction.SetDone(task.id, it)) },
                         onStartFocus = { onStartFocus(task) },
                         onMove = { onAction(TasksAction.MoveToLater(task.id)) },
                         onEditDueDate = { onAction(TasksAction.OpenDueDateEditor(task)) },
                         moveLabel = stringResource(Res.string.move_to_later)
-                    )
-                }
-            }
-
-            item { Spacer(Modifier.height(12.dp)) }
-
-            item {
-                LaterHeader(
-                    showLater = state.showLater,
-                    count = state.laterTasks.size,
-                    onToggle = { onAction(TasksAction.SetShowLater(!state.showLater)) }
-                )
-            }
-
-            if (state.showLater) {
-                itemsIndexed(state.laterTasks, key = { _, task -> task.id }) { index, task ->
-                    TaskRow(
-                        task = task,
-                        index = index,
-                        count = state.laterTasks.size,
-                        onSetDone = { onAction(TasksAction.SetDone(task.id, it)) },
-                        onStartFocus = { onStartFocus(task) },
-                        onMove = { onAction(TasksAction.MoveToToday(task.id)) },
-                        onEditDueDate = { onAction(TasksAction.OpenDueDateEditor(task)) },
-                        moveLabel = stringResource(Res.string.move_to_today)
                     )
                 }
             }
@@ -295,6 +312,44 @@ fun TasksScreen(
                 onDismiss = { onAction(TasksAction.DismissDueDateEditor) },
                 onSetDueDate = { onAction(TasksAction.SetDueDate(task.id, it)) },
                 onClearDueDate = { onAction(TasksAction.ClearDueDate(task.id)) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun TodayWorkbenchHeader(
+    state: TasksState,
+    onAction: (TasksAction) -> Unit,
+    onStartFocus: (TaskItem) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Spacer(Modifier.height(14.dp))
+        TodaySummaryRow(
+            completedTasks = state.todayCompletedTaskCount,
+            totalTasks = state.todayTotalTaskCount,
+            pomodoros = state.todayCompletedPomodoroCount,
+            focusTotal = state.todayFocusTotal
+        )
+        CurrentTaskPanel(
+            task = state.currentTask,
+            focusTotal = state.todayFocusTotal,
+            onStartFocus = onStartFocus,
+            onSetDone = { task, isDone -> onAction(TasksAction.SetDone(task.id, isDone)) },
+            onMoveToLater = { task -> onAction(TasksAction.MoveToLater(task.id)) }
+        )
+        AddTaskRow(
+            title = state.newTaskTitle,
+            onTitleChange = { onAction(TasksAction.SetNewTaskTitle(it)) },
+            onAdd = { onAction(TasksAction.AddTask(isToday = true)) }
+        )
+        Spacer(Modifier.height(2.dp))
+        if (state.activeTodayTasks.isEmpty() && state.completedTodayTasks.isEmpty()) {
+            Text(
+                stringResource(Res.string.no_tasks_today),
+                style = typography.bodyLarge,
+                color = colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)
             )
         }
     }
@@ -481,6 +536,9 @@ private fun TaskRow(
     task: TaskItem,
     index: Int,
     count: Int,
+    isDragging: Boolean,
+    dragScope: ReorderableCollectionItemScope?,
+    onDragStopped: () -> Unit,
     onSetDone: (Boolean) -> Unit,
     onStartFocus: () -> Unit,
     onMove: () -> Unit,
@@ -491,6 +549,13 @@ private fun TaskRow(
         stringResource(Res.string.set_due_date)
     } else {
         stringResource(Res.string.change_due_date)
+    }
+    val dragHandleModifier = if (dragScope != null) {
+        with(dragScope) {
+            Modifier.draggableHandle(onDragStopped = onDragStopped)
+        }
+    } else {
+        Modifier
     }
     SegmentedListItem(
         leadingContent = {
@@ -514,6 +579,14 @@ private fun TaskRow(
         },
         trailingContent = {
             Row {
+                if (!task.isDone) {
+                    IconButton(
+                        modifier = dragHandleModifier,
+                        onClick = {}
+                    ) {
+                        Icon(painterResource(Res.drawable.drag_handle), stringResource(Res.string.drag_task))
+                    }
+                }
                 IconButton(onClick = onEditDueDate) {
                     Icon(painterResource(Res.drawable.view_day), dueDateActionLabel)
                 }
@@ -527,7 +600,7 @@ private fun TaskRow(
         },
         shapes = segmentedListItemShapes(index, count),
         colors = listItemColors,
-        selected = false,
+        selected = isDragging,
         onClick = { onSetDone(!task.isDone) }
     ) {
         Text(
