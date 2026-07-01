@@ -22,16 +22,13 @@ import android.os.Build
 import androidx.compose.material3.MaterialTheme.typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.util.fastForEach
 import androidx.glance.ColorFilter
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
 import androidx.glance.GlanceTheme.colors
-import androidx.glance.Image
 import androidx.glance.ImageProvider
 import androidx.glance.LocalContext
 import androidx.glance.LocalSize
@@ -41,14 +38,15 @@ import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
-import androidx.glance.appwidget.updateAll
 import androidx.glance.background
 import androidx.glance.layout.Alignment
 import androidx.glance.layout.Box
 import androidx.glance.layout.Column
 import androidx.glance.layout.Row
 import androidx.glance.layout.Spacer
+import androidx.glance.layout.fillMaxHeight
 import androidx.glance.layout.fillMaxSize
+import androidx.glance.layout.fillMaxWidth
 import androidx.glance.layout.height
 import androidx.glance.layout.padding
 import androidx.glance.layout.width
@@ -59,20 +57,17 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.get
 import org.nsh07.pomodoro.MainActivity
 import org.nsh07.pomodoro.R
-import org.nsh07.pomodoro.data.Stat
-import org.nsh07.pomodoro.data.StatRepository
+import org.nsh07.pomodoro.data.TaskRepository
+import org.nsh07.pomodoro.ui.tasksScreen.DueDateLabelKey
+import org.nsh07.pomodoro.ui.tasksScreen.dueDateLabel
 import org.nsh07.pomodoro.ui.theme.lightScheme
-import org.nsh07.pomodoro.utils.millisecondsToHoursMinutes
-import org.nsh07.pomodoro.utils.millisecondsToMinutes
+import org.nsh07.pomodoro.widget.TomatoWidgetSize.Height1
 import org.nsh07.pomodoro.widget.TomatoWidgetSize.Height2
 import org.nsh07.pomodoro.widget.TomatoWidgetSize.Width4
-import org.nsh07.pomodoro.widget.components.GlanceText
-import org.nsh07.pomodoro.widget.components.HorizontalStackedBarGlance
 import java.time.LocalDate
 
 class TodayAppWidget : GlanceAppWidget(), KoinComponent {
@@ -82,26 +77,33 @@ class TodayAppWidget : GlanceAppWidget(), KoinComponent {
         context: Context,
         id: GlanceId
     ) {
-        val statRepository: StatRepository = get()
-        val stat = statRepository.getTodayStat().first()
-            ?: Stat(LocalDate.now(), 0, 0, 0, 0, 0)
+        val taskRepository: TaskRepository = get()
+        val tasks = taskRepository.getActiveTodayTasks().first()
 
         provideContent {
             key(LocalSize.current) {
                 GlanceTheme {
-                    Content(stat)
+                    Content(tasks.toTodayTodoWidgetState(maxItems = visibleTaskCount()))
                 }
             }
         }
     }
 
     @Composable
-    private fun Content(stat: Stat) {
-        val context = LocalContext.current
+    private fun visibleTaskCount(): Int {
         val size = LocalSize.current
-        val scope = rememberCoroutineScope()
+        return when {
+            size.height <= Height1 -> 1
+            size.height < Height2 -> 2
+            size.width >= Width4 -> 5
+            else -> 3
+        }
+    }
+
+    @Composable
+    private fun Content(state: TodayTodoWidgetState) {
+        val context = LocalContext.current
         Box(
-            contentAlignment = Alignment.TopEnd,
             modifier = GlanceModifier
                 .then(
                     if (Build.VERSION.SDK_INT >= 31) GlanceModifier.background(colors.widgetBackground)
@@ -115,81 +117,116 @@ class TodayAppWidget : GlanceAppWidget(), KoinComponent {
         ) {
             Column(GlanceModifier.fillMaxSize()) {
                 Text(
-                    context.getString(R.string.focus),
+                    context.getString(R.string.today_widget_title_count, state.unfinishedCount),
                     style = TextStyle(
                         color = colors.onSurface,
-                        fontSize = typography.titleMedium.fontSize
+                        fontSize = typography.titleMedium.fontSize,
+                        fontWeight = FontWeight.Bold
                     )
                 )
 
-                GlanceText(
-                    context,
-                    millisecondsToHoursMinutes(
-                        stat.totalFocusTime(),
-                        context.getString(R.string.hours_and_minutes_format)
-                    ),
-                    typography.displaySmall.fontSize.value,
-                    colors.onSurface,
-                    fontWeight = FontWeight.Bold,
-                    isClock = true,
-                    modifier = GlanceModifier.padding(top = 8.dp)
-                )
+                Spacer(GlanceModifier.height(8.dp))
 
-                Spacer(GlanceModifier.defaultWeight())
-
-                if (size.height >= Height2) {
-                    val values = listOf(
-                        stat.focusTimeQ1,
-                        stat.focusTimeQ2,
-                        stat.focusTimeQ3,
-                        stat.focusTimeQ4
-                    )
-                    if (size.width >= Width4) {
-                        Row {
-                            values.fastForEach {
-                                Box(
-                                    contentAlignment = Alignment.Center,
-                                    modifier = GlanceModifier.width(((size.width.value - 32f) / 4).dp)
-                                ) {
-                                    GlanceText(
-                                        context,
-                                        if (it <= 60 * 60 * 1000)
-                                            millisecondsToMinutes(
-                                                it,
-                                                context.getString(R.string.minutes_format)
-                                            )
-                                        else millisecondsToHoursMinutes(
-                                            it,
-                                            context.getString(R.string.hours_and_minutes_format)
-                                        ),
-                                        typography.bodyLarge.fontSize.value,
-                                        colors.onSurfaceVariant,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        }
-                    }
-                    Spacer(GlanceModifier.height(8.dp))
-                    HorizontalStackedBarGlance(
-                        values = values,
-                        width = size.width - 32.dp
-                    )
+                if (state.visibleTasks.isEmpty()) {
+                    EmptyState(context)
+                } else {
+                    TaskList(context, state.visibleTasks)
                 }
             }
+        }
+    }
 
-            if (size.width >= Width4) {
-                Image(
-                    provider = ImageProvider(R.drawable.refresh),
-                    contentDescription = null,
-                    colorFilter = ColorFilter.tint(colors.onSurface),
+    @Composable
+    private fun EmptyState(context: Context) {
+        Column(GlanceModifier.fillMaxWidth()) {
+            Text(
+                context.getString(R.string.today_widget_empty),
+                style = TextStyle(
+                    color = colors.onSurface,
+                    fontSize = typography.bodyLarge.fontSize,
+                    fontWeight = FontWeight.Medium
+                )
+            )
+            Spacer(GlanceModifier.height(4.dp))
+            Text(
+                context.getString(R.string.today_widget_empty_desc),
+                style = TextStyle(
+                    color = colors.onSurfaceVariant,
+                    fontSize = typography.bodyMedium.fontSize
+                )
+            )
+        }
+    }
+
+    @Composable
+    private fun TaskList(
+        context: Context,
+        tasks: List<TodayTodoWidgetTask>
+    ) {
+        Column(GlanceModifier.fillMaxWidth()) {
+            tasks.forEachIndexed { index, task ->
+                if (index > 0) Spacer(GlanceModifier.height(6.dp))
+                TaskRow(context, task)
+            }
+        }
+    }
+
+    @Composable
+    private fun TaskRow(
+        context: Context,
+        task: TodayTodoWidgetTask
+    ) {
+        Row(
+            modifier = GlanceModifier
+                .fillMaxWidth()
+                .height(28.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            if (task.isCurrent) {
+                Box(
                     modifier = GlanceModifier
-                        .cornerRadius(12.dp)
-                        .clickable {
-                            scope.launch { this@TodayAppWidget.updateAll(context) }
-                        }
+                        .width(4.dp)
+                        .fillMaxHeight()
+                        .cornerRadius(4.dp)
+                        .background(colors.primary)
+                ) {}
+                Spacer(GlanceModifier.width(8.dp))
+            } else {
+                Spacer(GlanceModifier.width(12.dp))
+            }
+
+            Column(modifier = GlanceModifier.defaultWeight()) {
+                Text(
+                    task.title,
+                    style = TextStyle(
+                        color = colors.onSurface,
+                        fontSize = typography.bodyMedium.fontSize,
+                        fontWeight = if (task.isCurrent) FontWeight.Bold else FontWeight.Normal
+                    )
                 )
             }
+
+            task.dueDate?.let { dueDate ->
+                Spacer(GlanceModifier.width(8.dp))
+                Text(
+                    context.widgetDueDateText(dueDate),
+                    style = TextStyle(
+                        color = colors.onSurfaceVariant,
+                        fontSize = typography.labelSmall.fontSize
+                    )
+                )
+            }
+        }
+    }
+
+    private fun Context.widgetDueDateText(dueDate: LocalDate): String {
+        val label = dueDateLabel(dueDate) ?: return ""
+        return when (label.key) {
+            DueDateLabelKey.OVERDUE -> getString(R.string.overdue)
+            DueDateLabelKey.TODAY -> getString(R.string.due_today)
+            DueDateLabelKey.TOMORROW -> getString(R.string.due_tomorrow)
+            DueDateLabelKey.WEEKDAY -> getString(R.string.due_weekday, label.argument)
+            DueDateLabelKey.DATE -> getString(R.string.due_date, label.argument)
         }
     }
 
@@ -199,17 +236,30 @@ class TodayAppWidget : GlanceAppWidget(), KoinComponent {
     private fun ContentPreview() {
         GlanceTheme(colors = ColorProviders(lightScheme)) {
             Box(GlanceModifier.background(Color.White)) {
-                Box(
-                    GlanceModifier.cornerRadius(32.dp)
-                ) {
+                Box(GlanceModifier.cornerRadius(32.dp)) {
                     Content(
-                        Stat(
-                            date = LocalDate.of(2026, 3, 12),
-                            focusTimeQ1 = 1617943,
-                            focusTimeQ2 = 5704591,
-                            focusTimeQ3 = 556490,
-                            focusTimeQ4 = 1200498,
-                            breakTime = 3939448
+                        TodayTodoWidgetState(
+                            unfinishedCount = 4,
+                            visibleTasks = listOf(
+                                TodayTodoWidgetTask(
+                                    id = 1,
+                                    title = "Review Today page",
+                                    dueDate = LocalDate.now(),
+                                    isCurrent = true
+                                ),
+                                TodayTodoWidgetTask(
+                                    id = 2,
+                                    title = "Plan widget refresh",
+                                    dueDate = LocalDate.now().plusDays(1),
+                                    isCurrent = false
+                                ),
+                                TodayTodoWidgetTask(
+                                    id = 3,
+                                    title = "Build debug APK",
+                                    dueDate = null,
+                                    isCurrent = false
+                                )
+                            )
                         )
                     )
                 }
