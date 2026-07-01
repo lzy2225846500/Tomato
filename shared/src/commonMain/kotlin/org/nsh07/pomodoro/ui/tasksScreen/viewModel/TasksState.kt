@@ -25,6 +25,12 @@ data class TasksState(
     val activeTodayTasks: List<TaskItem> = emptyList(),
     val completedTodayTasks: List<TaskItem> = emptyList(),
     val laterTasks: List<TaskItem> = emptyList(),
+    val currentTask: TaskItem? = null,
+    val todayCompletedTaskCount: Int = 0,
+    val todayTotalTaskCount: Int = 0,
+    val todayCompletedPomodoroCount: Int = 0,
+    val todayFocusTotal: Long = 0,
     val newTaskTitle: String = "",
-    val showLater: Boolean = false
+    val showLater: Boolean = false,
+    val dueDateEditorTask: TaskItem? = null
 )

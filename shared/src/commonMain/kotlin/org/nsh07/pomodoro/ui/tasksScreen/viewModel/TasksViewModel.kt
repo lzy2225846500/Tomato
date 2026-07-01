@@ -22,27 +22,62 @@ import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.flow.MutableStateFlow
+import org.nsh07.pomodoro.data.FocusSessionRepository
+import org.nsh07.pomodoro.data.TaskItem
 import org.nsh07.pomodoro.data.TaskRepository
 
+private data class TaskLists(
+    val activeTodayTasks: List<TaskItem>,
+    val completedTodayTasks: List<TaskItem>,
+    val laterTasks: List<TaskItem>
+)
+
+private data class TodaySummary(
+    val completedTaskCount: Int,
+    val completedPomodoroCount: Int,
+    val focusTotal: Long
+)
+
 class TasksViewModel(
-    private val taskRepository: TaskRepository
+    private val taskRepository: TaskRepository,
+    private val focusSessionRepository: FocusSessionRepository
 ) : ViewModel() {
     private val localState = MutableStateFlow(TasksState())
 
-    val state: StateFlow<TasksState> = combine(
-        localState,
+    private val taskLists = combine(
         taskRepository.getActiveTodayTasks(),
         taskRepository.getCompletedTodayTasks(),
         taskRepository.getLaterTasks()
-    ) { state, activeTodayTasks, completedTodayTasks, laterTasks ->
-        state.copy(
-            activeTodayTasks = activeTodayTasks,
-            completedTodayTasks = completedTodayTasks,
-            laterTasks = laterTasks
+    ) { activeTodayTasks, completedTodayTasks, laterTasks ->
+        TaskLists(activeTodayTasks, completedTodayTasks, laterTasks)
+    }
+
+    private val todaySummary = combine(
+        taskRepository.getTodayCompletedCount(),
+        focusSessionRepository.getTodayCompletedPomodoroCount(),
+        focusSessionRepository.getTodayFocusTotal()
+    ) { completedTaskCount, completedPomodoroCount, focusTotal ->
+        TodaySummary(completedTaskCount, completedPomodoroCount, focusTotal)
+    }
+
+    val state: StateFlow<TasksState> = combine(
+        localState,
+        taskLists,
+        todaySummary
+    ) { local, lists, summary ->
+        local.copy(
+            activeTodayTasks = lists.activeTodayTasks,
+            completedTodayTasks = lists.completedTodayTasks,
+            laterTasks = lists.laterTasks,
+            currentTask = lists.activeTodayTasks.firstOrNull(),
+            todayCompletedTaskCount = summary.completedTaskCount,
+            todayTotalTaskCount = lists.activeTodayTasks.size + lists.completedTodayTasks.size,
+            todayCompletedPomodoroCount = summary.completedPomodoroCount,
+            todayFocusTotal = summary.focusTotal
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TasksState())
 
@@ -74,8 +109,38 @@ class TasksViewModel(
                 taskRepository.moveToLater(action.id)
             }
 
+            is TasksAction.MoveWithinToday -> viewModelScope.launch {
+                taskRepository.moveWithinToday(action.fromIndex, action.toIndex)
+            }
+
+            is TasksAction.MoveWithinLater -> viewModelScope.launch {
+                taskRepository.moveWithinLater(action.fromIndex, action.toIndex)
+            }
+
+            is TasksAction.MoveToSection -> viewModelScope.launch {
+                taskRepository.moveToSection(action.taskId, action.targetIsToday, action.targetIndex)
+            }
+
+            is TasksAction.OpenDueDateEditor -> localState.update {
+                it.copy(dueDateEditorTask = action.task)
+            }
+
+            is TasksAction.SetDueDate -> viewModelScope.launch {
+                taskRepository.setDueDate(action.id, action.dueDate)
+                localState.update { it.copy(dueDateEditorTask = null) }
+            }
+
+            is TasksAction.ClearDueDate -> viewModelScope.launch {
+                taskRepository.clearDueDate(action.id)
+                localState.update { it.copy(dueDateEditorTask = null) }
+            }
+
             is TasksAction.DeleteTask -> viewModelScope.launch {
                 taskRepository.deleteTask(action.id)
+            }
+
+            TasksAction.DismissDueDateEditor -> localState.update {
+                it.copy(dueDateEditorTask = null)
             }
         }
     }

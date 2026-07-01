@@ -17,6 +17,9 @@
 
 package org.nsh07.pomodoro.ui.tasksScreen.viewModel
 
+import org.nsh07.pomodoro.data.TaskItem
+import java.time.LocalDate
+
 sealed interface TasksAction {
     data class SetNewTaskTitle(val title: String) : TasksAction
     data class SetShowLater(val value: Boolean) : TasksAction
@@ -24,5 +27,12 @@ sealed interface TasksAction {
     data class SetDone(val id: Long, val isDone: Boolean) : TasksAction
     data class MoveToToday(val id: Long) : TasksAction
     data class MoveToLater(val id: Long) : TasksAction
+    data class MoveWithinToday(val fromIndex: Int, val toIndex: Int) : TasksAction
+    data class MoveWithinLater(val fromIndex: Int, val toIndex: Int) : TasksAction
+    data class MoveToSection(val taskId: Long, val targetIsToday: Boolean, val targetIndex: Int) : TasksAction
+    data class OpenDueDateEditor(val task: TaskItem) : TasksAction
+    data class SetDueDate(val id: Long, val dueDate: LocalDate) : TasksAction
+    data class ClearDueDate(val id: Long) : TasksAction
     data class DeleteTask(val id: Long) : TasksAction
+    data object DismissDueDateEditor : TasksAction
 }
