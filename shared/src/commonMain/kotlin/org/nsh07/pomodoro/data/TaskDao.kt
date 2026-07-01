@@ -75,6 +75,12 @@ interface TaskDao {
     )
     fun getLaterTasks(): Flow<List<TaskItem>>
 
+    @Query("SELECT * FROM task_item WHERE isToday = 1 AND isDone = 0 ORDER BY sortOrder ASC, id ASC")
+    suspend fun getActiveTodayTasksSnapshot(): List<TaskItem>
+
+    @Query("SELECT * FROM task_item WHERE isToday = 0 AND isDone = 0 ORDER BY sortOrder ASC, id ASC")
+    suspend fun getLaterTasksSnapshot(): List<TaskItem>
+
     @Query("SELECT COALESCE(MAX(sortOrder), -1) FROM task_item WHERE isToday = :isToday AND isDone = 0")
     suspend fun getMaxSortOrder(isToday: Boolean): Long
 

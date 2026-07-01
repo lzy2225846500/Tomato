@@ -29,6 +29,11 @@ interface TaskRepository {
     suspend fun setDone(id: Long, isDone: Boolean)
     suspend fun moveToToday(id: Long)
     suspend fun moveToLater(id: Long)
+    suspend fun moveWithinToday(fromIndex: Int, toIndex: Int)
+    suspend fun moveWithinLater(fromIndex: Int, toIndex: Int)
+    suspend fun moveToSection(taskId: Long, targetIsToday: Boolean, targetIndex: Int)
+    suspend fun setDueDate(id: Long, dueDate: LocalDate?)
+    suspend fun clearDueDate(id: Long)
     suspend fun deleteTask(id: Long)
     suspend fun getTask(id: Long): TaskItem?
     fun getActiveTodayTasks(): Flow<List<TaskItem>>
@@ -46,10 +51,12 @@ class AppTaskRepository(
         withContext(ioDispatcher) {
             val trimmed = title.trim()
             if (trimmed.isEmpty()) return@withContext null
+            val nextOrder = taskDao.getMaxSortOrder(isToday) + 1
             taskDao.insertTask(
                 TaskItem(
                     title = trimmed,
                     isToday = isToday,
+                    sortOrder = nextOrder,
                     createdAt = Instant.now()
                 )
             )
@@ -61,15 +68,77 @@ class AppTaskRepository(
     }
 
     override suspend fun setDone(id: Long, isDone: Boolean) = withContext(ioDispatcher) {
-        taskDao.setDone(id, isDone, if (isDone) Instant.now() else null)
+        val task = taskDao.getTask(id) ?: return@withContext
+        val sortOrder = if (isDone) task.sortOrder else taskDao.getMaxSortOrder(task.isToday) + 1
+        taskDao.setDone(id, isDone, if (isDone) Instant.now() else null, sortOrder)
     }
 
     override suspend fun moveToToday(id: Long) = withContext(ioDispatcher) {
-        taskDao.setToday(id, true)
+        taskDao.setSectionAndOrder(id, true, taskDao.getMaxSortOrder(true) + 1)
     }
 
     override suspend fun moveToLater(id: Long) = withContext(ioDispatcher) {
-        taskDao.setToday(id, false)
+        taskDao.setSectionAndOrder(id, false, taskDao.getMaxSortOrder(false) + 1)
+    }
+
+    override suspend fun moveWithinToday(fromIndex: Int, toIndex: Int) = withContext(ioDispatcher) {
+        val tasks = taskDao.getActiveTodayTasksSnapshot()
+        tasks.map { TaskOrderUpdate(it.id, true, it.sortOrder) }
+            .moveWithinSection(fromIndex, toIndex)
+            .forEach { taskDao.setSectionAndOrder(it.id, it.isToday, it.sortOrder) }
+    }
+
+    override suspend fun moveWithinLater(fromIndex: Int, toIndex: Int) = withContext(ioDispatcher) {
+        val tasks = taskDao.getLaterTasksSnapshot()
+        tasks.map { TaskOrderUpdate(it.id, false, it.sortOrder) }
+            .moveWithinSection(fromIndex, toIndex)
+            .forEach { taskDao.setSectionAndOrder(it.id, it.isToday, it.sortOrder) }
+    }
+
+    override suspend fun moveToSection(taskId: Long, targetIsToday: Boolean, targetIndex: Int) =
+        withContext(ioDispatcher) {
+            val sourceIsToday = taskDao.getTask(taskId)?.isToday ?: return@withContext
+            if (sourceIsToday == targetIsToday) {
+                val source = if (sourceIsToday) {
+                    taskDao.getActiveTodayTasksSnapshot()
+                } else {
+                    taskDao.getLaterTasksSnapshot()
+                }
+                val fromIndex = source.indexOfFirst { it.id == taskId }
+                if (fromIndex < 0) return@withContext
+                source.map { TaskOrderUpdate(it.id, sourceIsToday, it.sortOrder) }
+                    .moveWithinSection(fromIndex, targetIndex)
+                    .forEach { taskDao.setSectionAndOrder(it.id, it.isToday, it.sortOrder) }
+                return@withContext
+            }
+            val source = if (sourceIsToday) {
+                taskDao.getActiveTodayTasksSnapshot()
+            } else {
+                taskDao.getLaterTasksSnapshot()
+            }
+            val target = if (targetIsToday) {
+                taskDao.getActiveTodayTasksSnapshot()
+            } else {
+                taskDao.getLaterTasksSnapshot()
+            }
+            val result = moveAcrossSections(
+                source = source.map { TaskOrderUpdate(it.id, sourceIsToday, it.sortOrder) },
+                target = target.map { TaskOrderUpdate(it.id, targetIsToday, it.sortOrder) },
+                movedTaskId = taskId,
+                targetIndex = targetIndex,
+                targetIsToday = targetIsToday
+            )
+            (result.source + result.target).forEach {
+                taskDao.setSectionAndOrder(it.id, it.isToday, it.sortOrder)
+            }
+        }
+
+    override suspend fun setDueDate(id: Long, dueDate: LocalDate?) = withContext(ioDispatcher) {
+        taskDao.setDueDate(id, dueDate)
+    }
+
+    override suspend fun clearDueDate(id: Long) = withContext(ioDispatcher) {
+        taskDao.setDueDate(id, null)
     }
 
     override suspend fun deleteTask(id: Long) = withContext(ioDispatcher) {
