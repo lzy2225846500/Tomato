@@ -64,7 +64,6 @@ import org.nsh07.pomodoro.ui.SettingsNavItem
 import org.nsh07.pomodoro.ui.mergePaddingValues
 import org.nsh07.pomodoro.ui.settingsScreen.ResetDataDialog
 import org.nsh07.pomodoro.ui.settingsScreen.components.LocaleBottomSheet
-import org.nsh07.pomodoro.ui.settingsScreen.components.PlusPromo
 import org.nsh07.pomodoro.ui.settingsScreen.viewModel.SettingsAction
 import org.nsh07.pomodoro.ui.settingsScreen.viewModel.SettingsState
 import org.nsh07.pomodoro.ui.theme.CustomColors.listItemColors
@@ -156,12 +155,6 @@ fun SettingsMainScreen(
                 .padding(horizontal = 16.dp)
         ) {
             item { Spacer(Modifier.height(14.dp)) }
-
-            item {
-                PlusPromo(isPlus, setShowPaywall)
-            }
-
-            item { Spacer(Modifier.height(12.dp)) }
 
             itemsIndexed(settingsScreens) { index, item ->
                 SegmentedListItem(

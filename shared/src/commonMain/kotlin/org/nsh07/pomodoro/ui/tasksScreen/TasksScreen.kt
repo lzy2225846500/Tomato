@@ -71,6 +71,7 @@ import org.nsh07.pomodoro.ui.theme.TomatoShapeDefaults.segmentedListItemShapes
 import tomato.shared.generated.resources.Res
 import tomato.shared.generated.resources.add_task
 import tomato.shared.generated.resources.completed_tasks
+import tomato.shared.generated.resources.check_circle_40dp
 import tomato.shared.generated.resources.focus
 import tomato.shared.generated.resources.folder
 import tomato.shared.generated.resources.later
@@ -249,7 +250,7 @@ private fun AddTaskRow(
             onClick = onAdd,
             enabled = title.isNotBlank()
         ) {
-            Icon(painterResource(Res.drawable.check), stringResource(Res.string.add_task))
+            Icon(painterResource(Res.drawable.check_circle_40dp), stringResource(Res.string.add_task))
         }
     }
 }

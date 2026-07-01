@@ -350,7 +350,7 @@ fun AppScreen(
                                 .clickable {
                                     if (!uiState.timerRunning)
                                         timerViewModel.onAction(TimerAction.ToggleTimer)
-                                    backStack.onTopLevelNavigate(Screen.AOD)
+                                    if (backStack.lastOrNull() !is Screen.AOD) backStack.add(Screen.AOD)
                                 } else Modifier
                         )
                     }

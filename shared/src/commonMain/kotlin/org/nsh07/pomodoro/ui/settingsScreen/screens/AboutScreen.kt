@@ -82,7 +82,6 @@ import org.nsh07.pomodoro.ui.theme.TomatoTheme
 import tomato.shared.generated.resources.Res
 import tomato.shared.generated.resources.about
 import tomato.shared.generated.resources.app_name
-import tomato.shared.generated.resources.app_name_plus
 import tomato.shared.generated.resources.arrow_back
 import tomato.shared.generated.resources.back
 import tomato.shared.generated.resources.discord
@@ -196,8 +195,7 @@ fun AboutScreen(
                             Spacer(Modifier.width(16.dp))
                             Column {
                                 Text(
-                                    if (!isPlus) stringResource(Res.string.app_name)
-                                    else stringResource(Res.string.app_name_plus),
+                                    stringResource(Res.string.app_name),
                                     color = colorScheme.onSurface,
                                     style = typography.titleLarge,
                                     fontFamily = typography.bodyLarge.fontFamily

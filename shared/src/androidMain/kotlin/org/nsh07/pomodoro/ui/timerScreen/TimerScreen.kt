@@ -44,6 +44,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
@@ -135,7 +136,6 @@ import org.nsh07.pomodoro.ui.timerScreen.viewModel.TimerState
 import org.nsh07.pomodoro.utils.millisecondsToStr
 import tomato.shared.generated.resources.Res
 import tomato.shared.generated.resources.app_name
-import tomato.shared.generated.resources.app_name_plus
 import tomato.shared.generated.resources.clear
 import tomato.shared.generated.resources.check_circle_40dp
 import tomato.shared.generated.resources.focus
@@ -248,8 +248,7 @@ fun SharedTransitionScope.TimerScreen(
                                     when (it) {
                                         TimerMode.BRAND ->
                                             Text(
-                                                if (!isPlus) stringResource(Res.string.app_name)
-                                                else stringResource(Res.string.app_name_plus),
+                                                stringResource(Res.string.app_name),
                                                 style = TextStyle(
                                                     fontFamily = LocalAppFonts.current.topBarTitle,
                                                     fontSize = 32.sp,
@@ -468,7 +467,7 @@ fun SharedTransitionScope.TimerScreen(
                                                 ) {
                                                     Icon(
                                                         painterResource(Res.drawable.clear),
-                                                        stringResource(Res.string.clear)
+                                                        contentDescription = null
                                                     )
                                                 }
                                             }
