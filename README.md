@@ -3,6 +3,11 @@
 
 ## About
 
+> This repository is a personal modified fork of
+> [nsh07/Tomato](https://github.com/nsh07/Tomato). It keeps the original GPLv3
+> license and adds a lightweight TODO + Pomodoro workflow, including Today task
+> planning, due dates, drag ordering, and a Today TODO home-screen widget.
+
 Tomato is a minimalist Pomodoro timer for Android based on Material 3 Expressive.
 
 </div>
