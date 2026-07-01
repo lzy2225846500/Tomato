@@ -131,7 +131,11 @@
     <string name="timer_session_count">%1$d of %2$d</string>
     <string name="timer_settings_reset_info">Reset the timer to change settings</string>
     <string name="today">Today</string>
-    <string name="today_widget_desc">Today\u0027s focus stats</string>
+    <string name="today_widget_desc">Today\u0027s tasks</string>
+    <string name="today_widget_title_count">Today %1$d</string>
+    <string name="today_widget_empty">No tasks today</string>
+    <string name="today_widget_empty_desc">Tap to plan your day</string>
+    <string name="today_widget_current_task">Current</string>
     <string name="tomato_foss">Tomato FOSS</string>
     <string name="tomato_foss_desc">All features are unlocked in this version. If my app made a difference in your life, please consider supporting me by donating on %1$s.</string>
     <string name="tomato_plus_desc">Customize further with Tomato+</string>

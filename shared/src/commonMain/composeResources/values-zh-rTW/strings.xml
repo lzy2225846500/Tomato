@@ -131,7 +131,11 @@
     <string name="focus_history_calendar_desc">過去一個月的專注歷史。上個月的日期會以不同顏色標示，點擊日期可查看詳細資訊。</string>
     <string name="back">返回</string>
     <string name="reset_data_dialog_title">要重設所有統計資料嗎？</string>
-    <string name="today_widget_desc">今日專注統計</string>
+    <string name="today_widget_desc">今日待辦</string>
+    <string name="today_widget_title_count">今天 %1$d項</string>
+    <string name="today_widget_empty">今天沒有待辦</string>
+    <string name="today_widget_empty_desc">點按規劃今天</string>
+    <string name="today_widget_current_task">目前</string>
     <string name="unassigned">未關聯任務</string>
     <string name="history_widget_desc">查看過去幾天的專注時長圖表。顯示的天數會依小工具大小而有所不同。</string>
     <string name="dnd_permission_message">啟用「%1$s」的權限</string>

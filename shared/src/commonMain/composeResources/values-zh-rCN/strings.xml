@@ -129,7 +129,11 @@
     <string name="pomodoros">番茄钟</string>
     <string name="task_title">任务标题</string>
     <string name="task_focus">任务专注</string>
-    <string name="today_widget_desc">今日专注统计</string>
+    <string name="today_widget_desc">今日待办</string>
+    <string name="today_widget_title_count">今天 %1$d项</string>
+    <string name="today_widget_empty">今天没有待办</string>
+    <string name="today_widget_empty_desc">点按规划今天</string>
+    <string name="today_widget_current_task">当前</string>
     <string name="total">总计</string>
     <string name="focus_breakdown">专注分布</string>
     <string name="focus_history_heatmap_desc">过去一年的专注历史。颜色越深代表专注时长越长。天数按月份分组，点击日期可查看更多信息。</string>
